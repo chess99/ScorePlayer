@@ -2,6 +2,12 @@
 
 本项目允许你使用电脑键盘模拟弹奏 MusicXML 格式的乐谱。它通过读取 `.mxl` 或 `.musicxml` 文件，将其音符映射到键盘按键，并使用 `pynput` 库模拟按键操作。
 
+## 演示 (Demo)
+
+[![视频演示](docs/video_cover.png)](https://www.bilibili.com/video/BV1WAGZzSExy/)
+
+[点击查看 Bilibili 演示视频](https://www.bilibili.com/video/BV1WAGZzSExy/)
+
 ## 功能特性
 
 * **MusicXML 解析**: 使用 `music21` 库加载和解析乐谱文件。
