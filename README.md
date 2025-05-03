@@ -97,14 +97,16 @@ python main.py [选项]
 * 不同操作系统和环境下的 `pynput` 行为可能略有差异。
 * **管理员权限**: 在 Windows 上，通常不需要管理员权限即可运行 `main.py`。但如果你想将模拟按键发送到 **以管理员权限运行** 的其他应用程序，则 `main.py` 也需要以管理员权限运行。在其他操作系统（如 macOS 或某些 Linux 配置）上，全局键盘监听或控制可能需要特殊权限设置。
 
-4.  **延音踏板 (Sustain Pedal)**
-
-### 精确还原乐谱标记
+## 精确还原乐谱标记
 
 我们致力于尽可能精确地还原乐谱中的标记信息，以提升播放的真实感。目前已支持：
 
-*   **力度 (Dynamics):** 识别乐谱中的 *pp, p, mf, f, ff* 等标记并调整音量（`sample` 后端）。
-*   **速度变化 (Tempo Changes):** 识别并应用乐谱中的速度标记 (`MetronomeMark`)。
-*   **发音 - 断奏 (Articulation - Staccato):** 识别音符上的断奏标记 (小圆点 `·`)，并缩短其播放后的等待时间，以产生短促、分离的效果。
+* **力度 (Dynamics):** 识别乐谱中的 *pp, p, mf, f, ff* 等标记并调整音量（`sample` 后端）。
+* **速度变化 (Tempo Changes):** 识别并应用乐谱中的速度标记 (`MetronomeMark`)。
+* **发音 - 断奏 (Articulation - Staccato):** 识别音符上的断奏标记 (小圆点 `·`)，并缩短其播放后的等待时间，以产生短促、分离的效果。
+* **延音踏板 (Sustain Pedal):** (尚未实现) 计划支持识别乐谱中的踏板标记 (`Ped.` 和 `*`) 并模拟其效果。
 
-下一步计划支持延音踏板。
+## 致谢 (Acknowledgements)
+
+* 本项目使用的钢琴音频样本 (`samples/piano/`) 来源于 [Wscats/piano](https://github.com/Wscats/piano)。
+* `scores/` 目录下的部分乐谱来源于 [musetrainer/library](https://github.com/musetrainer/library)。
