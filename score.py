@@ -136,6 +136,15 @@ def load_and_prepare_score(score_path: str, tolerance: int, backend_min_midi: in
 
         if min_full >= effective_min and max_full <= effective_max:
             print(f"Full score fits within backend range + tolerance {tolerance}. Playing all parts.")
+            # Chordify the score to group simultaneous notes from different parts into chords
+            try:
+                print("Chordifying score...")
+                score = score.chordify()
+                print("Score chordified.")
+            except Exception as e:
+                print(f"Warning: Chordify failed: {e}. Playback might have incorrect simultaneity.", file=sys.stderr)
+                # Proceed without chordify if it fails
+                
             elements_to_play = score.flat.notesAndRests
             apply_individual_shifts = True # Shift notes slightly outside strict backend range if tolerance > 0
             playback_mode = "Full Score"

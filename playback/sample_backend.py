@@ -102,8 +102,8 @@ class SamplePlaybackBackend(PlaybackBackend):
         print("Initializing pygame mixer...")
         try:
             pygame.mixer.init()
-            # pygame.mixer.set_num_channels(32) # Optional: Increase channels if needed
-            print("Pygame mixer initialized.")
+            pygame.mixer.set_num_channels(32) # Increase available channels
+            print("Pygame mixer initialized with 32 channels.")
         except Exception as e:
             print(f"Error initializing pygame mixer: {e}", file=sys.stderr)
             print("Sample playback will likely fail.", file=sys.stderr)
@@ -182,7 +182,7 @@ class SamplePlaybackBackend(PlaybackBackend):
         return map_key
 
 
-    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool):
+    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float):
         if not self.is_initialized:
             print("Warning: Sample backend not initialized. Cannot play note.", file=sys.stderr)
             return
@@ -198,7 +198,8 @@ class SamplePlaybackBackend(PlaybackBackend):
             sound = self.samples[sample_key]
             if sound:
                 try:
-                    print(f"Playing Sample: {note_pitch.nameWithOctave} -> Key: '{sample_key}' -> File: '{NOTE_SAMPLE_MAP.get(sample_key)}'")
+                    print(f"Playing Sample: {note_pitch.nameWithOctave} -> Key: '{sample_key}' -> File: '{NOTE_SAMPLE_MAP.get(sample_key)}' Vol: {volume:.2f}")
+                    sound.set_volume(volume)
                     sound.play()
                 except Exception as e:
                     print(f"Error playing sample for key '{sample_key}': {e}", file=sys.stderr)
@@ -210,7 +211,7 @@ class SamplePlaybackBackend(PlaybackBackend):
         
         # Duration is handled by the main playback loop, not the backend playing the sample.
 
-    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool):
+    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float):
         if not self.is_initialized:
             print("Warning: Sample backend not initialized. Cannot play chord.", file=sys.stderr)
             return
@@ -223,6 +224,7 @@ class SamplePlaybackBackend(PlaybackBackend):
                 sound = self.samples[sample_key]
                 if sound:
                      try:
+                          sound.set_volume(volume)
                           sound.play()
                           notes_played.append(f"{p.nameWithOctave} ('{sample_key}')")
                      except Exception as e:

@@ -6,7 +6,7 @@ import time
 
 # Attempt to import music21 components used here
 try:
-    from music21 import chord, note, stream
+    from music21 import articulations, chord, dynamics, note, stream, tempo
 except ImportError:
     print("Error: music21 library not found.", file=sys.stderr)
     print("Please install it using: pip install music21", file=sys.stderr)
@@ -78,6 +78,7 @@ class Player:
             playback_mode_desc = "Unknown"
             bpm = 120.0
             song_finished_naturally = False
+            current_volume = 0.6 # Default volume (approx mf)
 
             try:
                 # Load and prepare score within the thread, passing the backend's range
@@ -106,10 +107,28 @@ class Player:
                         if self.stop_event.is_set(): break
 
                         duration_sec = element.duration.quarterLength * sec_per_quarter
+                        
+                        # --- Determine wait duration (handling staccato) ---
+                        wait_duration_sec = duration_sec # Default to full duration
+                        is_staccato = False
+                        if hasattr(element, 'articulations'):
+                            for art in element.articulations:
+                                if isinstance(art, articulations.Staccato):
+                                    is_staccato = True
+                                    break
+                        if is_staccato:
+                            wait_duration_sec = duration_sec * 0.5 # Shorten wait for staccato
+                            # Optionally print staccato message here if needed outside the note block
+                            # print(f"-- Staccato on {type(element).__name__}! Wait duration: {wait_duration_sec:.3f}s")
+                        
+                        # --- Play the element ---
                         if isinstance(element, note.Note):
-                            self.backend.play_note(element.pitch, duration_sec, apply_shifts)
+                            # Staccato wait time is handled below, play the sample normally
+                            # (Removed staccato check from here)
+                            self.backend.play_note(element.pitch, duration_sec, apply_shifts, current_volume)
                         elif isinstance(element, chord.Chord):
-                            self.backend.play_chord(element.pitches, duration_sec, apply_shifts)
+                            # Staccato wait time is handled below, play samples normally
+                            self.backend.play_chord(element.pitches, duration_sec, apply_shifts, current_volume)
                         elif isinstance(element, note.Rest):
                             self.backend.rest(duration_sec)
                         else:
@@ -117,7 +136,7 @@ class Player:
                             continue # Skip the wait for unknown elements
 
                         # Wait for duration (with pause/stop checks)
-                        sleep_end_time = time.monotonic() + duration_sec
+                        sleep_end_time = time.monotonic() + wait_duration_sec # Use potentially shortened duration
                         while time.monotonic() < sleep_end_time:
                             while self.is_paused:
                                 if self.stop_event.is_set(): break

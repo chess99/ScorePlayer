@@ -22,7 +22,7 @@ class PlaybackBackend(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool):
+    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float):
         """Play a single note.
 
         Args:
@@ -30,11 +30,12 @@ class PlaybackBackend(abc.ABC):
             duration_sec: The duration to hold the note (backend specific interpretation).
             apply_octave_shift: Whether the backend should attempt to shift the octave
                                 if the pitch is outside its ideal range.
+            volume: The volume level (0.0 to 1.0).
         """
         pass
 
     @abc.abstractmethod
-    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool):
+    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float):
         """Play a chord (multiple notes simultaneously).
 
         Args:
@@ -42,6 +43,7 @@ class PlaybackBackend(abc.ABC):
             duration_sec: The duration to hold the chord (backend specific interpretation).
             apply_octave_shift: Whether the backend should attempt to shift the octave
                                 for pitches outside its ideal range.
+            volume: The volume level (0.0 to 1.0).
         """
         pass
 
