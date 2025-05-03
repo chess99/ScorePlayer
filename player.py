@@ -12,7 +12,12 @@ except ImportError:
     print("Please install it using: pip install music21", file=sys.stderr)
     sys.exit(1)
 
+from config import BACKEND_MIDI_RANGES  # Import backend ranges
 from playback.base import PlaybackBackend
+
+# Import specific backends for type checking if needed, avoids circular imports
+from playback.pynput_backend import PynputKeyboardBackend
+from playback.sample_backend import SamplePlaybackBackend
 from score import load_and_prepare_score
 
 
@@ -30,6 +35,22 @@ class Player:
         self.playback_thread: threading.Thread | None = None
         self.stop_event = threading.Event()
 
+        # Determine backend range
+        self.backend_min_midi = 48 # Default fallback (C3)
+        self.backend_max_midi = 83 # Default fallback (B5)
+        backend_name = None
+        if isinstance(backend, PynputKeyboardBackend):
+            backend_name = 'pynput'
+        elif isinstance(backend, SamplePlaybackBackend):
+             backend_name = 'sample'
+        
+        if backend_name and backend_name in BACKEND_MIDI_RANGES:
+            self.backend_min_midi = BACKEND_MIDI_RANGES[backend_name]['min']
+            self.backend_max_midi = BACKEND_MIDI_RANGES[backend_name]['max']
+        else:
+             print(f"Warning: Could not determine MIDI range for backend type {type(backend)}. Using default C3-B5.", file=sys.stderr)
+
+        print(f"Player initialized with backend MIDI range: {self.backend_min_midi}-{self.backend_max_midi}")
         self.backend.start()
 
     def _playback_loop(self):
@@ -59,9 +80,12 @@ class Player:
             song_finished_naturally = False
 
             try:
-                # Load and prepare score within the thread
+                # Load and prepare score within the thread, passing the backend's range
                 elements_to_play, apply_shifts, playback_mode_desc, bpm = \
-                    load_and_prepare_score(self.current_score_path, self.tolerance)
+                    load_and_prepare_score(self.current_score_path,
+                                             self.tolerance,
+                                             self.backend_min_midi,
+                                             self.backend_max_midi)
 
                 if elements_to_play is None:
                     print(f"Failed to load or prepare score '{os.path.basename(self.current_score_path)}'. Aborting playback of this score.")

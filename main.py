@@ -21,13 +21,15 @@ from config import (
 )
 from hotkey_listener import HotkeyListener
 from playback.pynput_backend import PynputKeyboardBackend
+
+# We'll import SamplePlaybackBackend conditionally later
 from player import Player
 from score import scan_scores
 
 
 def main():
     # --- Argument Parsing ---
-    parser = argparse.ArgumentParser(description='Play MusicXML scores via keyboard simulation with hotkeys.')
+    parser = argparse.ArgumentParser(description='Play MusicXML scores via keyboard simulation or audio samples.')
     parser.add_argument(
         '-t', '--tolerance',
         type=int,
@@ -41,6 +43,13 @@ def main():
         choices=['random', 'sequential'],
         help='Playback mode: sequential or random (default).'
     )
+    parser.add_argument(
+        '-b', '--backend',
+        type=str,
+        default='pynput',
+        choices=['pynput', 'sample'],
+        help='Playback backend: pynput (keyboard simulation) or sample (audio files). Default: pynput.'
+    )
     args = parser.parse_args()
 
     # --- Initialization ---
@@ -48,9 +57,26 @@ def main():
     # Scan for scores initially
     discovered_scores = scan_scores()
 
-    # Initialize Playback Backend
-    # In the future, could select different backends here
-    playback_backend = PynputKeyboardBackend()
+    # Initialize Playback Backend based on argument
+    playback_backend = None
+    if args.backend == 'pynput':
+        playback_backend = PynputKeyboardBackend()
+    elif args.backend == 'sample':
+        try:
+            from playback.sample_backend import SamplePlaybackBackend
+            playback_backend = SamplePlaybackBackend()
+        except ImportError as e:
+            print(f"Error importing SamplePlaybackBackend: {e}", file=sys.stderr)
+            print("Please ensure pygame is installed ('pip install pygame'). Falling back to pynput.", file=sys.stderr)
+            playback_backend = PynputKeyboardBackend() # Fallback
+        except Exception as e:
+             print(f"Error initializing SamplePlaybackBackend: {e}", file=sys.stderr)
+             print("Falling back to pynput backend.", file=sys.stderr)
+             playback_backend = PynputKeyboardBackend() # Fallback
+    else:
+        # Should not happen due to argparse choices, but safety first
+        print(f"Error: Unknown backend '{args.backend}'. Using pynput.", file=sys.stderr)
+        playback_backend = PynputKeyboardBackend()
 
     # Initialize Player Controller
     player = Player(backend=playback_backend,
@@ -64,6 +90,7 @@ def main():
     # --- Print Status and Instructions ---
     print("\n--- Controls ---")
     print(f" Playback Mode:   {args.mode.capitalize()}")
+    print(f" Playback Backend: {args.backend}")
     print(f" Score Tolerance: {args.tolerance}")
     print(f" Scores Directory: '{ABS_SCORES_DIRECTORY}'")
     if discovered_scores:

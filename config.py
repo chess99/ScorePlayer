@@ -16,6 +16,13 @@ DEFAULT_TEMPO_BPM = 120 # Default BPM if not found in score
 KEYBOARD_MIN_MIDI = 48 # C3
 KEYBOARD_MAX_MIDI = 83 # B5
 
+# Define MIDI ranges supported by different backends
+# Used to determine if full score playback is feasible
+BACKEND_MIDI_RANGES = {
+    'pynput': {'min': KEYBOARD_MIN_MIDI, 'max': KEYBOARD_MAX_MIDI}, # C3-B5
+    'sample': {'min': 36, 'max': 92} # C2-G#6 (Based on provided sample map keys)
+}
+
 # For pynput_backend, can be moved later if more backends are added
 # Maps standard accidental symbols to pynput modifier keys
 ACCIDENTAL_MODIFIERS = {

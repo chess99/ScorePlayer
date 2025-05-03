@@ -20,8 +20,6 @@ except ImportError:
 
 from config import (
     DEFAULT_TEMPO_BPM,
-    KEYBOARD_MAX_MIDI,
-    KEYBOARD_MIN_MIDI,
     SCORES_DIRECTORY,
 )
 
@@ -110,9 +108,10 @@ def get_tempo_bpm(music21_stream: stream.Stream) -> float:
         print(f"Error extracting tempo: {e}. Using default.", file=sys.stderr)
         return float(DEFAULT_TEMPO_BPM)
 
-def load_and_prepare_score(score_path: str, tolerance: int) -> tuple[stream.Stream | None, bool, str, float]:
-    """Loads a score, determines playback mode (full/melody), performs transposition if needed,
-       and returns the elements to play, whether to apply individual shifts, the mode description, and tempo.
+def load_and_prepare_score(score_path: str, tolerance: int, backend_min_midi: int, backend_max_midi: int) -> tuple[stream.Stream | None, bool, str, float]:
+    """Loads a score, determines playback mode (full/melody) based on backend range,
+       performs transposition if needed, and returns the elements to play,
+       whether to apply individual shifts, the mode description, and tempo.
     """
     elements_to_play = None
     apply_individual_shifts = True
@@ -131,16 +130,17 @@ def load_and_prepare_score(score_path: str, tolerance: int) -> tuple[stream.Stre
              return None, False, "No Notes", bpm # Return None if no notes
 
         print(f"Full score range: MIDI {min_full} - {max_full}")
-        effective_min = KEYBOARD_MIN_MIDI - tolerance
-        effective_max = KEYBOARD_MAX_MIDI + tolerance
+        print(f"Backend supported range: MIDI {backend_min_midi} - {backend_max_midi}")
+        effective_min = backend_min_midi - tolerance
+        effective_max = backend_max_midi + tolerance
 
         if min_full >= effective_min and max_full <= effective_max:
-            print(f"Full score fits within tolerance {tolerance}. Playing all parts.")
+            print(f"Full score fits within backend range + tolerance {tolerance}. Playing all parts.")
             elements_to_play = score.flat.notesAndRests
-            apply_individual_shifts = True # Shift notes slightly outside strict range if tolerance > 0
+            apply_individual_shifts = True # Shift notes slightly outside strict backend range if tolerance > 0
             playback_mode = "Full Score"
         else:
-            print("Full score range exceeds tolerance. Attempting melody (Part 1) playback.")
+            print("Full score range exceeds backend range + tolerance. Attempting melody (Part 1) playback.")
             if not score.parts:
                 print("Error: Score has no parts, cannot extract melody.", file=sys.stderr)
                 raise ValueError("Score has no parts")
@@ -154,20 +154,23 @@ def load_and_prepare_score(score_path: str, tolerance: int) -> tuple[stream.Stre
 
             print(f"Melody (Part 1) range: MIDI {min_melody} - {max_melody}")
 
+            # Transposition logic now aims to fit within the BACKEND's range, not the fixed keyboard range
             transpose_semitones = 0
-            if min_melody < KEYBOARD_MIN_MIDI:
-                transpose_semitones = 12 * math.ceil((KEYBOARD_MIN_MIDI - min_melody) / 12.0)
-            elif max_melody > KEYBOARD_MAX_MIDI:
-                transpose_semitones = -12 * math.ceil((max_melody - KEYBOARD_MAX_MIDI) / 12.0)
+            if min_melody < backend_min_midi:
+                # Calculate semitones needed to bring the lowest melody note up to the backend minimum
+                transpose_semitones = 12 * math.ceil((backend_min_midi - min_melody) / 12.0)
+            elif max_melody > backend_max_midi:
+                # Calculate semitones needed to bring the highest melody note down to the backend maximum
+                transpose_semitones = -12 * math.ceil((max_melody - backend_max_midi) / 12.0)
 
             if transpose_semitones != 0:
-                print(f"Transposing melody by {transpose_semitones} semitones to fit strict range.")
+                print(f"Transposing melody by {transpose_semitones} semitones to fit backend range.")
                 transposition_interval = interval.Interval(transpose_semitones)
                 # Apply transposition (can be slow)
                 melody_part = melody_part.transpose(transposition_interval)
                 print("Melody transposed.")
             else:
-                 print("Melody already fits within strict C3-B5 range.")
+                 print("Melody already fits within backend range.")
 
             elements_to_play = melody_part.flat.notesAndRests
             apply_individual_shifts = False # Don't shift individual notes in the already transposed melody

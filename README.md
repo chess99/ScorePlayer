@@ -27,22 +27,20 @@
     cd piano # 或者你的项目目录名
     ```
 
-2. **安装依赖**: 本项目主要依赖 `music21` 和 `pynput`。
-    * **music21**: 这是一个强大的音乐学分析库。根据 [music21 安装文档](https://web.mit.edu/music21/doc/usersGuide/usersGuide_01_installing.html)，可能需要一些额外的配置（例如设置 MusicXML 阅读器路径，如 MuseScore 或 Finale）。最简单的安装方式是使用 pip：
+2. **安装依赖**: 本项目主要依赖 `music21`, `pynput`, 和 `pygame`。
+    * 或者，可以直接使用 `requirements.txt` 安装所有依赖:
 
         ```bash
-        pip install music21
+        pip install -r requirements.txt
         ```
 
-        *注意*: `music21` 可能有其自身的依赖项，请参考其官方文档进行完整安装。
+    * **music21**: 这是一个强大的音乐学分析库。根据 [music21 安装文档](https://web.mit.edu/music21/doc/usersGuide/usersGuide_01_installing.html)，可能需要一些额外的配置（例如设置 MusicXML 阅读器路径，如 MuseScore 或 Finale）。
     * **pynput**: 用于监听和控制键盘输入。
+    * **pygame**: 用于 `sample` 后端播放音频文件。
 
-        ```bash
-        pip install pynput
-        ```
-
-3. **准备乐谱**:
-    * 将你的 `.mxl` 或 `.musicxml` 格式的乐谱文件放入项目根目录下的 `scores` 文件夹中。如果 `scores` 目录不存在，程序首次运行时会自动创建。
+3. **准备乐谱和音频样本**:
+    * **乐谱**: 将你的 `.mxl` 或 `.musicxml` 格式的乐谱文件放入项目根目录下的 `scores` 文件夹中。如果 `scores` 目录不存在，程序首次运行时会自动创建。
+    * **音频样本 (可选, 用于 `sample` 后端)**: 将单个音符的音频文件（推荐 `.mp3` 或 `.wav` 格式）放入 `samples/piano/` 目录下。文件名需要能被 `sample_backend.py` 中的 `NOTE_SAMPLE_MAP` 字典正确映射（当前脚本基于您提供的 JS 映射）。如果使用 `sample` 后端但缺少文件，程序会打印警告但仍可运行（缺失音符无声）。
 
 ## 如何运行
 
@@ -54,10 +52,11 @@ python main.py [选项]
 
 **命令行选项**:
 
-* `-m MODE`, `--mode MODE`: 设置播放模式。
-  * `sequential`: 按文件名顺序播放 `scores/` 目录中的乐谱。
-  * `random` (默认): 随机播放 `scores/` 目录中的乐谱（尽量不连续重复）。
-* `-t TOLERANCE`, `--tolerance TOLERANCE`: 设置音高容差（MIDI 音程数）。默认值为 `0`。此参数允许在决定是否播放完整乐谱（所有声部）时，乐谱的最高音和最低音可以超出严格的键盘范围 ([C3(48), B5(83)]) 多少个半音。例如，`-t 2` 意味着如果乐谱的音高范围在 [46, 85] 之内，仍然会尝试播放完整乐谱。如果超出此容差范围，则回退到仅播放旋律声部（并进行必要的八度移调）。
+* `-m MODE`, `--mode MODE`: 设置播放模式 (`sequential` | `random` (默认))。
+* `-t TOLERANCE`, `--tolerance TOLERANCE`: 设置音高容差（MIDI 音程数, 默认 `0`）。用于判断是否播放完整乐谱还是仅旋律声部。
+* `-b BACKEND`, `--backend BACKEND`: 选择播放后端。
+  * `pynput` (默认): 通过模拟键盘按键播放。有效音域约为 C3-B5（根据 `config.py`）。
+  * `sample`: 通过播放 `samples/piano/` 目录下的音频文件播放。有效音域取决于 `samples/piano/` 中提供的样本文件（当前配置约为 C2-G#6）。
 
 ## 热键控制
 
