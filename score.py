@@ -24,26 +24,31 @@ from config import (
 
 
 def scan_scores(directory_path: str) -> list[str]:
-    """Scans the specified directory for .mxl and .musicxml files."""
+    """Scans the specified directory **recursively** for .mxl and .musicxml files."""
     discovered_scores = []
+    if not os.path.isdir(directory_path):
+        try: # Attempt to create if it doesn't exist
+             os.makedirs(directory_path)
+             print(f"Created scores directory: {directory_path}")
+        except Exception as create_e:
+             print(f"Error: Scores directory not found and could not be created: {directory_path}", file=sys.stderr)
+             print(f"  Reason: {create_e}", file=sys.stderr)
+             return [] # Return empty list if directory is invalid
+
+    print(f"Recursively scanning for scores in '{directory_path}'...")
     try:
-        if not os.path.isdir(directory_path):
-            try: # Attempt to create if it doesn't exist
-                 os.makedirs(directory_path)
-                 print(f"Created scores directory: {directory_path}")
-            except Exception as create_e:
-                 print(f"Error: Scores directory not found and could not be created: {directory_path}", file=sys.stderr)
-                 print(f"  Reason: {create_e}", file=sys.stderr)
-                 return [] # Return empty list if directory is invalid
+        for dirpath, _, filenames in os.walk(directory_path):
+            for filename in filenames:
+                if filename.lower().endswith(('.mxl', '.musicxml')):
+                    full_path = os.path.join(dirpath, filename)
+                    discovered_scores.append(full_path)
 
-        print(f"Scanning for scores in '{directory_path}'...")
-        for filename in sorted(os.listdir(directory_path)):
-            if filename.lower().endswith(('.mxl', '.musicxml')):
-                full_path = os.path.join(directory_path, filename)
-                discovered_scores.append(full_path)
-
-        if not discovered_scores:
-            print(f"No scores found in '{directory_path}'. Please add .mxl or .musicxml files.")
+        if discovered_scores:
+            # Sort the found scores for consistent order (optional, but good)
+            discovered_scores.sort()
+            print(f"Found {len(discovered_scores)} scores.")
+        else:
+            print(f"No scores found in '{directory_path}' or its subdirectories.")
 
     except Exception as e:
         print(f"Error scanning scores directory '{directory_path}': {e}", file=sys.stderr)
