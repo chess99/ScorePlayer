@@ -57,6 +57,7 @@ python main.py [选项]
 * `-b BACKEND`, `--backend BACKEND`: 选择播放后端。
   * `pynput` (默认): 通过模拟键盘按键播放。有效音域约为 C3-B5（根据 `config.py`）。
   * `sample`: 通过播放 `samples/piano/` 目录下的音频文件播放。有效音域取决于 `samples/piano/` 中提供的样本文件（当前配置约为 C2-G#6）。
+* `-d DIRECTORY`, `--directory DIRECTORY`: 指定包含 MusicXML 乐谱文件的目录路径。默认为 `scores`。
 
 ## 热键控制
 

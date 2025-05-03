@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 
 # Check for music21 before other imports that might depend on it indirectly
@@ -11,7 +12,7 @@ except ImportError:
 
 # Local imports after checking dependencies
 from config import (
-    ABS_SCORES_DIRECTORY,
+    DEFAULT_SCORES_DIRECTORY,
     EXIT_HOTKEY_COMBINATION,
     NEXT_SCORE_HOTKEY_COMBINATION,
     PAUSE_RESUME_HOTKEY_COMBINATION,
@@ -50,12 +51,24 @@ def main():
         choices=['pynput', 'sample'],
         help='Playback backend: pynput (keyboard simulation) or sample (audio files). Default: pynput.'
     )
+    parser.add_argument(
+        '-d', '--directory',
+        type=str,
+        default=DEFAULT_SCORES_DIRECTORY,
+        help=f'Directory containing MusicXML scores. Default: {DEFAULT_SCORES_DIRECTORY}'
+    )
     args = parser.parse_args()
 
     # --- Initialization ---
     print("--- Piano Player Initializing ---")
-    # Scan for scores initially
-    discovered_scores = scan_scores()
+    
+    # Determine actual scores directory and get absolute path
+    scores_dir = args.directory
+    abs_scores_dir = os.path.abspath(scores_dir)
+    print(f"Using scores directory: {abs_scores_dir}")
+    
+    # Scan for scores initially using the specified directory
+    discovered_scores = scan_scores(scores_dir)
 
     # Initialize Playback Backend based on argument
     playback_backend = None
@@ -92,7 +105,7 @@ def main():
     print(f" Playback Mode:   {args.mode.capitalize()}")
     print(f" Playback Backend: {args.backend}")
     print(f" Score Tolerance: {args.tolerance}")
-    print(f" Scores Directory: '{ABS_SCORES_DIRECTORY}'")
+    print(f" Scores Directory: '{abs_scores_dir}'")
     if discovered_scores:
         print(f" Discovered {len(discovered_scores)} scores.")
     else:

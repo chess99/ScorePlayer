@@ -1,5 +1,5 @@
-import math
 import os
+import statistics  # Import statistics module
 import sys
 
 # Attempt to import music21
@@ -20,29 +20,33 @@ except ImportError:
 
 from config import (
     DEFAULT_TEMPO_BPM,
-    SCORES_DIRECTORY,
 )
 
 
-def scan_scores() -> list[str]:
-    """Scans the SCORES_DIRECTORY for .mxl and .musicxml files."""
+def scan_scores(directory_path: str) -> list[str]:
+    """Scans the specified directory for .mxl and .musicxml files."""
     discovered_scores = []
     try:
-        if not os.path.isdir(SCORES_DIRECTORY):
-            os.makedirs(SCORES_DIRECTORY)
-            print(f"Created scores directory: {SCORES_DIRECTORY}")
+        if not os.path.isdir(directory_path):
+            try: # Attempt to create if it doesn't exist
+                 os.makedirs(directory_path)
+                 print(f"Created scores directory: {directory_path}")
+            except Exception as create_e:
+                 print(f"Error: Scores directory not found and could not be created: {directory_path}", file=sys.stderr)
+                 print(f"  Reason: {create_e}", file=sys.stderr)
+                 return [] # Return empty list if directory is invalid
 
-        print(f"Scanning for scores in '{SCORES_DIRECTORY}'...")
-        for filename in sorted(os.listdir(SCORES_DIRECTORY)):
+        print(f"Scanning for scores in '{directory_path}'...")
+        for filename in sorted(os.listdir(directory_path)):
             if filename.lower().endswith(('.mxl', '.musicxml')):
-                full_path = os.path.join(SCORES_DIRECTORY, filename)
+                full_path = os.path.join(directory_path, filename)
                 discovered_scores.append(full_path)
 
         if not discovered_scores:
-            print(f"No scores found in '{SCORES_DIRECTORY}'. Please add .mxl or .musicxml files.")
+            print(f"No scores found in '{directory_path}'. Please add .mxl or .musicxml files.")
 
     except Exception as e:
-        print(f"Error scanning scores directory: {e}", file=sys.stderr)
+        print(f"Error scanning scores directory '{directory_path}': {e}", file=sys.stderr)
         discovered_scores = [] # Ensure empty list on error
 
     return discovered_scores
@@ -163,27 +167,62 @@ def load_and_prepare_score(score_path: str, tolerance: int, backend_min_midi: in
 
             print(f"Melody (Part 1) range: MIDI {min_melody} - {max_melody}")
 
-            # Transposition logic now aims to fit within the BACKEND's range, not the fixed keyboard range
-            transpose_semitones = 0
-            if min_melody < backend_min_midi:
-                # Calculate semitones needed to bring the lowest melody note up to the backend minimum
-                transpose_semitones = 12 * math.ceil((backend_min_midi - min_melody) / 12.0)
-            elif max_melody > backend_max_midi:
-                # Calculate semitones needed to bring the highest melody note down to the backend maximum
-                transpose_semitones = -12 * math.ceil((max_melody - backend_max_midi) / 12.0)
+            # --- New Transposition Logic: Center the melody --- 
+            melody_notes = list(melody_part.flat.notes)
+            if not melody_notes:
+                print("Warning: Part 1 contains no actual notes for transposition analysis.")
+                # Keep existing min/max based range check as fallback?
+                # Or just return None? Let's return None for simplicity.
+                return None, False, "No Melody Notes", bpm
+                
+            melody_midi_values = []
+            for element in melody_notes:
+                 if isinstance(element, note.Note):
+                      if element.pitch.midi is not None:
+                           melody_midi_values.append(element.pitch.midi)
+                 elif isinstance(element, chord.Chord):
+                      # Use the highest note of the chord for centering analysis? Or lowest? Or average?
+                      # Let's use the highest note for now, as it's often the melodic one.
+                      # Alternatively, could use average, or all notes.
+                      highest_midi_in_chord = float('-inf')
+                      has_valid_pitch = False
+                      for p in element.pitches:
+                           if p.midi is not None:
+                                has_valid_pitch = True
+                                highest_midi_in_chord = max(highest_midi_in_chord, p.midi)
+                      if has_valid_pitch:
+                           melody_midi_values.append(highest_midi_in_chord)
+                           
+            if not melody_midi_values:
+                 print("Warning: Could not extract valid MIDI values from Part 1 notes.")
+                 return None, False, "No Melody Notes", bpm
+
+            median_midi = statistics.median(melody_midi_values)
+            TARGET_CENTER_MIDI = 65 # Target G4 as the center
+            transpose_semitones = round(TARGET_CENTER_MIDI - median_midi) # Round to nearest semitone
+
+            print(f"Melody median MIDI: {median_midi:.1f}. Targeting center: {TARGET_CENTER_MIDI}.")
+            print(f"Calculated transposition based on median: {transpose_semitones} semitones.")
+
+            # --- Original Transposition Logic (commented out for reference) ---
+            # transpose_semitones = 0
+            # if min_melody < backend_min_midi:
+            #     transpose_semitones = 12 * math.ceil((backend_min_midi - min_melody) / 12.0)
+            # elif max_melody > backend_max_midi:
+            #     transpose_semitones = -12 * math.ceil((max_melody - backend_max_midi) / 12.0)
+            # --- End Original Logic --- 
 
             if transpose_semitones != 0:
-                print(f"Transposing melody by {transpose_semitones} semitones to fit backend range.")
+                print(f"Transposing melody by {transpose_semitones} semitones to center on keyboard.")
                 transposition_interval = interval.Interval(transpose_semitones)
-                # Apply transposition (can be slow)
                 melody_part = melody_part.transpose(transposition_interval)
                 print("Melody transposed.")
             else:
-                 print("Melody already fits within backend range.")
+                 print("Melody median already centered or no transposition needed.")
 
             elements_to_play = melody_part.flat.notesAndRests
-            apply_individual_shifts = False # Don't shift individual notes in the already transposed melody
-            playback_mode = f"Melody Only{'+Transposed' if transpose_semitones != 0 else ''}"
+            apply_individual_shifts = True # IMPORTANT: Allow individual shifting for outliers
+            playback_mode = f"Melody Only+Centered (Transposed {transpose_semitones})"
 
         bpm = get_tempo_bpm(score)
         if not isinstance(bpm, (int, float)) or bpm <= 0:

@@ -1,9 +1,8 @@
-import os
 
 from pynput import keyboard
 
 # --- Configuration ---
-SCORES_DIRECTORY = 'scores'
+DEFAULT_SCORES_DIRECTORY = 'scores'
 PREV_SCORE_HOTKEY_COMBINATION = {keyboard.Key.f7}
 NEXT_SCORE_HOTKEY_COMBINATION = {keyboard.Key.f8}
 START_HOTKEY_COMBINATION = {keyboard.Key.f9}
@@ -45,4 +44,4 @@ NOTE_TO_JIANPU_BASE = {
 }
 
 # Derived Configurations
-ABS_SCORES_DIRECTORY = os.path.abspath(SCORES_DIRECTORY) 
+# ABS_SCORES_DIRECTORY = os.path.abspath(SCORES_DIRECTORY) 
