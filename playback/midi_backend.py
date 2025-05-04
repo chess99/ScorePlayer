@@ -30,15 +30,18 @@ from playback.base import PlaybackBackend
 class MidiPlaybackBackend(PlaybackBackend):
     """用MIDI设备播放音符的后端，提供精确的音符持续时间控制"""
 
-    def __init__(self, port_name=None):
+    def __init__(self, port_name=None, instrument=0):
         """初始化MIDI后端
         
         Args:
             port_name: 特定MIDI设备名称，如果为None则使用第一个可用端口
                       如果没有可用端口，则创建虚拟端口
+            instrument: MIDI乐器程序号 (0-127), 默认为0 (大钢琴)
+                      General MIDI标准定义: 0-7为钢琴类, 0=大钢琴
         """
         self.midi_out = RtMidiOut()
         self.port_name = port_name
+        self.instrument = instrument  # 存储乐器程序号
         self.is_initialized = False
         
         # 跟踪当前活跃的音符
@@ -81,6 +84,9 @@ class MidiPlaybackBackend(PlaybackBackend):
                 # 没有可用端口，创建虚拟端口
                 self.midi_out.open_virtual_port("Piano Player")
                 print("已创建虚拟MIDI端口: Piano Player")
+            
+            # 端口连接后，发送Program Change消息设置乐器
+            self._set_instrument(self.instrument)
                 
             self.is_initialized = True
             
@@ -287,4 +293,35 @@ class MidiPlaybackBackend(PlaybackBackend):
                 del self.active_notes[note_id]
                 
         except Exception as e:
-            print(f"发送MIDI Note-Off消息时出错: {e}", file=sys.stderr) 
+            print(f"发送MIDI Note-Off消息时出错: {e}", file=sys.stderr)
+
+    def _set_instrument(self, program_number):
+        """设置MIDI乐器音色
+        
+        Args:
+            program_number: General MIDI乐器程序号 (0-127)
+            
+        注: General MIDI乐器列表:
+            0-7: 钢琴类 (0=大钢琴, 1=明亮钢琴, 2=电钢琴, 等)
+            8-15: 色彩打击乐器 (8=钢片琴, 9=钟琴, 等) 
+            16-23: 风琴类
+            24-31: 吉他类
+            32-39: 贝斯类
+            40-47: 弦乐类
+            48-55: 合奏/合唱类
+            56-63: 铜管类
+            64-71: 簧乐器类
+            72-79: 笛类
+            80-87: 合成主音类
+            88-95: 合成音色类
+            96-103: 合成效果类
+            104-111: 民族乐器类
+            112-119: 打击乐器类
+            120-127: 声音效果类
+        """
+        try:
+            # 发送Program Change消息 (0xC0) 到MIDI通道1
+            self.midi_out.send_message([0xC0, program_number])
+            print(f"已设置MIDI乐器: {program_number}")
+        except Exception as e:
+            print(f"设置MIDI乐器时出错: {e}", file=sys.stderr) 

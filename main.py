@@ -12,6 +12,7 @@ except ImportError:
 
 # Local imports after checking dependencies
 from config import (
+    DEFAULT_MIDI_INSTRUMENT,
     DEFAULT_MIDI_PORT_NAME,
     DEFAULT_SCORES_DIRECTORY,
     EXIT_HOTKEY_COMBINATION,
@@ -64,6 +65,12 @@ def main():
         default=DEFAULT_MIDI_PORT_NAME,
         help='MIDI port name to use (for midi backend). Default: use first available port or create virtual port.'
     )
+    parser.add_argument(
+        '--midi-instrument',
+        type=int,
+        default=DEFAULT_MIDI_INSTRUMENT,
+        help='MIDI instrument program number (0-127) for midi backend. Default: 0 (Acoustic Grand Piano).'
+    )
     args = parser.parse_args()
 
     # --- Initialization ---
@@ -96,7 +103,7 @@ def main():
     elif args.backend == 'midi':
         try:
             from playback.midi_backend import MidiPlaybackBackend
-            playback_backend = MidiPlaybackBackend(port_name=args.midi_port)
+            playback_backend = MidiPlaybackBackend(port_name=args.midi_port, instrument=args.midi_instrument)
         except ImportError as e:
             print(f"Error importing MidiPlaybackBackend: {e}", file=sys.stderr)
             print("Please ensure python-rtmidi is installed ('pip install python-rtmidi'). Falling back to pynput.", file=sys.stderr)
@@ -125,6 +132,8 @@ def main():
     print(f" Playback Backend: {args.backend}")
     if args.backend == 'midi' and args.midi_port:
         print(f" MIDI Port: {args.midi_port}")
+    if args.backend == 'midi':
+        print(f" MIDI Instrument: {args.midi_instrument} (0=Grand Piano, 1=Bright Piano, etc.)")
     print(f" Score Tolerance: {args.tolerance}")
     print(f" Scores Directory: '{abs_scores_dir}'")
     if discovered_scores:

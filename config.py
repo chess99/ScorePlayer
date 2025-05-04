@@ -26,6 +26,12 @@ BACKEND_MIDI_RANGES = {
 DEFAULT_MIDI_PORT_NAME = None  # 默认使用第一个可用端口，如果无可用端口则创建虚拟端口
 # 可以设置为特定端口名称，如 "Microsoft GS Wavetable Synth" 或 "LoopMIDI Port"
 
+# MIDI乐器配置
+DEFAULT_MIDI_INSTRUMENT = 0  # 0 = 大钢琴 (Acoustic Grand Piano)
+# General MIDI乐器参考:
+# 0-7: 钢琴类 (0=大钢琴, 1=明亮钢琴, 2=电钢琴, 3=酒吧钢琴, 等)
+# 详细列表请参考General MIDI标准
+
 # For pynput_backend, can be moved later if more backends are added
 # Maps standard accidental symbols to pynput modifier keys
 ACCIDENTAL_MODIFIERS = {

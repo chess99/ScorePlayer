@@ -66,6 +66,9 @@ python main.py [选项]
   * `midi`: 通过MIDI输出播放。支持完整的MIDI音域（0-127），最准确地表现音符的持续时间和音量。需要 `python-rtmidi` 库。
 * `-d DIRECTORY`, `--directory DIRECTORY`: 指定包含 MusicXML 乐谱文件的目录路径。默认为 `scores`。
 * `--midi-port PORT_NAME`: 指定MIDI端口名称（仅适用于MIDI后端）。默认使用第一个可用端口或创建虚拟端口。
+* `--midi-instrument NUMBER`: 指定MIDI乐器音色程序号（0-127，仅适用于MIDI后端）。默认为0（大钢琴）。
+  * 常用乐器音色：0=大钢琴, 1=明亮钢琴, 2=电钢琴, 3=酒吧钢琴, 4=柔和电钢琴
+  * 完整音色列表请参考[General MIDI音色表](https://en.wikipedia.org/wiki/General_MIDI#Program_change_events)
 
 ## 热键控制
 
@@ -108,7 +111,7 @@ python main.py [选项]
 * **后端局限性**:
   * **pynput 后端**: 由于是通过模拟键盘按键播放，无法实现长音的持续发声效果。当遇到tied notes（连音符）时，每个音符都会被单独触发，导致长音听起来像是重复的短音符。无法实现真正的音量控制。
   * **sample 后端**: 使用预录制的音频样本，虽然支持音量控制，但音频样本本身具有自然衰减特性，不适合持续播放长音。对于tied notes，样本的重新触发会导致听感不自然。
-  * **解决方案**: 现已实现MIDI后端，可精确控制音符持续时间。使用命令 `python main.py -b midi` 启动MIDI版本。
+  * **midi 后端**: 提供最精确的音符控制，支持音量、持续时间和连音。可使用`--midi-instrument`参数选择不同的音色（0=大钢琴，1=明亮钢琴等）。推荐用于需要精确还原连音(tie)和力度变化的乐谱。
 
 ## 精确还原乐谱标记
 
