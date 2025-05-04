@@ -182,7 +182,7 @@ class SamplePlaybackBackend(PlaybackBackend):
         return map_key
 
 
-    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float):
+    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float, is_tie_continuation: bool = False):
         if not self.is_initialized:
             print("Warning: Sample backend not initialized. Cannot play note.", file=sys.stderr)
             return
@@ -211,7 +211,7 @@ class SamplePlaybackBackend(PlaybackBackend):
         
         # Duration is handled by the main playback loop, not the backend playing the sample.
 
-    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float):
+    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float, tied_pitches: list[pitch.Pitch] = None):
         if not self.is_initialized:
             print("Warning: Sample backend not initialized. Cannot play chord.", file=sys.stderr)
             return

@@ -1,4 +1,3 @@
-
 from pynput import keyboard
 
 # --- Configuration ---
@@ -19,8 +18,13 @@ KEYBOARD_MAX_MIDI = 83 # B5
 # Used to determine if full score playback is feasible
 BACKEND_MIDI_RANGES = {
     'pynput': {'min': KEYBOARD_MIN_MIDI, 'max': KEYBOARD_MAX_MIDI}, # C3-B5
-    'sample': {'min': 36, 'max': 92} # C2-G#6 (Based on provided sample map keys)
+    'sample': {'min': 36, 'max': 92}, # C2-G#6 (Based on provided sample map keys)
+    'midi': {'min': 0, 'max': 127}  # 完整MIDI范围，所有音符都支持
 }
+
+# MIDI后端配置
+DEFAULT_MIDI_PORT_NAME = None  # 默认使用第一个可用端口，如果无可用端口则创建虚拟端口
+# 可以设置为特定端口名称，如 "Microsoft GS Wavetable Synth" 或 "LoopMIDI Port"
 
 # For pynput_backend, can be moved later if more backends are added
 # Maps standard accidental symbols to pynput modifier keys

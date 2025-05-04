@@ -113,7 +113,7 @@ class PynputKeyboardBackend(PlaybackBackend):
             print(f"Error simulating key '{key_char}' (Modifier: {modifier_key}): {e}", file=sys.stderr)
             return False
 
-    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float):
+    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float, is_tie_continuation: bool = False):
         # Volume is ignored for pynput backend
         key_char, mod_key, orig_name, shift_info = self._get_key_and_modifier(note_pitch, apply_octave_shift)
 
@@ -126,7 +126,7 @@ class PynputKeyboardBackend(PlaybackBackend):
             self._press_key_combo(key_char, mod_key)
         # Duration is handled by the main playback loop
 
-    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float):
+    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float, tied_pitches: list[pitch.Pitch] = None):
         # Volume is ignored for pynput backend
         keys_to_press = []
         log_parts = []

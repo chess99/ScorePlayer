@@ -63,7 +63,9 @@ python main.py [选项]
 * `-b BACKEND`, `--backend BACKEND`: 选择播放后端。
   * `pynput` (默认): 通过模拟键盘按键播放。有效音域约为 C3-B5（根据 `config.py`）。
   * `sample`: 通过播放 `samples/piano/` 目录下的音频文件播放。有效音域取决于 `samples/piano/` 中提供的样本文件（当前配置约为 C2-G#6）。
+  * `midi`: 通过MIDI输出播放。支持完整的MIDI音域（0-127），最准确地表现音符的持续时间和音量。需要 `python-rtmidi` 库。
 * `-d DIRECTORY`, `--directory DIRECTORY`: 指定包含 MusicXML 乐谱文件的目录路径。默认为 `scores`。
+* `--midi-port PORT_NAME`: 指定MIDI端口名称（仅适用于MIDI后端）。默认使用第一个可用端口或创建虚拟端口。
 
 ## 热键控制
 
@@ -106,7 +108,7 @@ python main.py [选项]
 * **后端局限性**:
   * **pynput 后端**: 由于是通过模拟键盘按键播放，无法实现长音的持续发声效果。当遇到tied notes（连音符）时，每个音符都会被单独触发，导致长音听起来像是重复的短音符。无法实现真正的音量控制。
   * **sample 后端**: 使用预录制的音频样本，虽然支持音量控制，但音频样本本身具有自然衰减特性，不适合持续播放长音。对于tied notes，样本的重新触发会导致听感不自然。
-  * **解决方案**: 对于需要精确控制音符持续时间的场景，建议使用标准MIDI设备或专业音频合成库。未来可能会实现MIDI后端来解决这些局限性。
+  * **解决方案**: 现已实现MIDI后端，可精确控制音符持续时间。使用命令 `python main.py -b midi` 启动MIDI版本。
 
 ## 精确还原乐谱标记
 

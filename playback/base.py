@@ -22,7 +22,7 @@ class PlaybackBackend(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float):
+    def play_note(self, note_pitch: pitch.Pitch, duration_sec: float, apply_octave_shift: bool, volume: float, is_tie_continuation: bool = False):
         """Play a single note.
 
         Args:
@@ -31,11 +31,13 @@ class PlaybackBackend(abc.ABC):
             apply_octave_shift: Whether the backend should attempt to shift the octave
                                 if the pitch is outside its ideal range.
             volume: The volume level (0.0 to 1.0).
+            is_tie_continuation: Whether this note is a continuation of a previously played tied note.
+                                 If True, backends may choose not to retrigger the note.
         """
         pass
 
     @abc.abstractmethod
-    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float):
+    def play_chord(self, chord_pitches: list[pitch.Pitch], duration_sec: float, apply_octave_shift: bool, volume: float, tied_pitches: list[pitch.Pitch] = None):
         """Play a chord (multiple notes simultaneously).
 
         Args:
@@ -44,6 +46,8 @@ class PlaybackBackend(abc.ABC):
             apply_octave_shift: Whether the backend should attempt to shift the octave
                                 for pitches outside its ideal range.
             volume: The volume level (0.0 to 1.0).
+            tied_pitches: List of pitches in the chord that are tied from a previous note/chord.
+                          Backends may choose not to retrigger these notes.
         """
         pass
 

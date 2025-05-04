@@ -18,6 +18,17 @@ from playback.base import PlaybackBackend
 # Import specific backends for type checking if needed, avoids circular imports
 from playback.pynput_backend import PynputKeyboardBackend
 from playback.sample_backend import SamplePlaybackBackend
+
+# 导入MIDI后端进行类型检查
+try:
+    from playback.midi_backend import MidiPlaybackBackend
+except ImportError:
+    # 如果导入失败，定义一个占位类型以避免运行时错误
+    class MidiPlaybackBackend:
+        pass
+    print("Warning: MidiPlaybackBackend not available for type checking.", file=sys.stderr)
+    print("This is not an error if you don't use the midi backend.", file=sys.stderr)
+
 from score import load_and_prepare_score
 
 
@@ -42,7 +53,9 @@ class Player:
         if isinstance(backend, PynputKeyboardBackend):
             backend_name = 'pynput'
         elif isinstance(backend, SamplePlaybackBackend):
-             backend_name = 'sample'
+            backend_name = 'sample'
+        elif isinstance(backend, MidiPlaybackBackend):
+            backend_name = 'midi'
         
         if backend_name and backend_name in BACKEND_MIDI_RANGES:
             self.backend_min_midi = BACKEND_MIDI_RANGES[backend_name]['min']
@@ -79,6 +92,9 @@ class Player:
             bpm = 120.0
             song_finished_naturally = False
             current_volume = 0.6 # Default volume (approx mf)
+            
+            # 用于跟踪tied notes的字典
+            tied_pitches = {}  # pitch.nameWithOctave -> pitch object
 
             try:
                 # Load and prepare score within the thread, passing the backend's range
@@ -118,18 +134,54 @@ class Player:
                                     break
                         if is_staccato:
                             wait_duration_sec = duration_sec * 0.5 # Shorten wait for staccato
-                            # Optionally print staccato message here if needed outside the note block
-                            # print(f"-- Staccato on {type(element).__name__}! Wait duration: {wait_duration_sec:.3f}s")
-                        
-                        # --- Play the element ---
+                            
+                        # --- 处理音符和休止符，包括tie信息 ---
                         if isinstance(element, note.Note):
-                            # Staccato wait time is handled below, play the sample normally
-                            # (Removed staccato check from here)
-                            self.backend.play_note(element.pitch, duration_sec, apply_shifts, current_volume)
+                            # 检查这个音符是否是tied continuation
+                            is_tied = (element.pitch.nameWithOctave in tied_pitches)
+                            
+                            # 检查这个音符是否有tie开始
+                            has_tie_start = False
+                            if hasattr(element, 'tie') and element.tie:
+                                has_tie_start = element.tie.type in ('start', 'continue')
+                                
+                            # 播放音符，传递tied状态
+                            self.backend.play_note(element.pitch, duration_sec, apply_shifts, current_volume, is_tied)
+                            
+                            # 更新tied音符跟踪字典
+                            if has_tie_start:
+                                # 标记为tied，供下一个音符使用
+                                tied_pitches[element.pitch.nameWithOctave] = element.pitch
+                            elif element.pitch.nameWithOctave in tied_pitches and not has_tie_start:
+                                # 如果之前是tied但现在不是start/continue，移除
+                                del tied_pitches[element.pitch.nameWithOctave]
+                                
                         elif isinstance(element, chord.Chord):
-                            # Staccato wait time is handled below, play samples normally
-                            self.backend.play_chord(element.pitches, duration_sec, apply_shifts, current_volume)
+                            # 收集当前chord中哪些音符是tied
+                            current_tied_pitches = []
+                            for p in element.pitches:
+                                if p.nameWithOctave in tied_pitches:
+                                    current_tied_pitches.append(tied_pitches[p.nameWithOctave])
+                            
+                            # 播放和弦，传递tied信息
+                            self.backend.play_chord(element.pitches, duration_sec, apply_shifts, current_volume, current_tied_pitches)
+                            
+                            # 更新tied音符跟踪
+                            new_tied_pitches = {}
+                            
+                            # 检查和弦中每个音符的tie状态
+                            for note_in_chord in element:
+                                if hasattr(note_in_chord, 'tie') and note_in_chord.tie:
+                                    has_tie_start = note_in_chord.tie.type in ('start', 'continue')
+                                    if has_tie_start:
+                                        # 这个音符将延续到下一个音符/和弦
+                                        new_tied_pitches[note_in_chord.pitch.nameWithOctave] = note_in_chord.pitch
+                            
+                            # 更新tied音符字典，仅保留仍然有tie的音符
+                            tied_pitches = new_tied_pitches
+                            
                         elif isinstance(element, note.Rest):
+                            # 休止符不影响tied状态，所有tied音符都保持不变
                             self.backend.rest(duration_sec)
                         else:
                             print(f"Skipping unknown element type: {type(element)}")

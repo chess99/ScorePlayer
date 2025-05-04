@@ -12,6 +12,7 @@ except ImportError:
 
 # Local imports after checking dependencies
 from config import (
+    DEFAULT_MIDI_PORT_NAME,
     DEFAULT_SCORES_DIRECTORY,
     EXIT_HOTKEY_COMBINATION,
     NEXT_SCORE_HOTKEY_COMBINATION,
@@ -23,7 +24,7 @@ from config import (
 from hotkey_listener import HotkeyListener
 from playback.pynput_backend import PynputKeyboardBackend
 
-# We'll import SamplePlaybackBackend conditionally later
+# We'll import other backends conditionally later
 from player import Player
 from score import scan_scores
 
@@ -32,9 +33,9 @@ def main():
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(description='Play MusicXML scores via keyboard simulation or audio samples.')
     parser.add_argument(
-        '-t', '--tolerance',
-        type=int,
-        default=0,
+        '-t', '--tolerance', 
+        type=int, 
+        default=0, 
         help='MIDI steps allowed outside the base range [48, 83] for full score playback. Default is 0 (strict).'
     )
     parser.add_argument(
@@ -48,14 +49,20 @@ def main():
         '-b', '--backend',
         type=str,
         default='pynput',
-        choices=['pynput', 'sample'],
-        help='Playback backend: pynput (keyboard simulation) or sample (audio files). Default: pynput.'
+        choices=['pynput', 'sample', 'midi'],
+        help='Playback backend: pynput (keyboard simulation), sample (audio files), or midi (MIDI output). Default: pynput.'
     )
     parser.add_argument(
         '-d', '--directory',
         type=str,
         default=DEFAULT_SCORES_DIRECTORY,
         help=f'Directory containing MusicXML scores. Default: {DEFAULT_SCORES_DIRECTORY}'
+    )
+    parser.add_argument(
+        '--midi-port',
+        type=str,
+        default=DEFAULT_MIDI_PORT_NAME,
+        help='MIDI port name to use (for midi backend). Default: use first available port or create virtual port.'
     )
     args = parser.parse_args()
 
@@ -83,10 +90,22 @@ def main():
             print("Please ensure pygame is installed ('pip install pygame'). Falling back to pynput.", file=sys.stderr)
             playback_backend = PynputKeyboardBackend() # Fallback
         except Exception as e:
-             print(f"Error initializing SamplePlaybackBackend: {e}", file=sys.stderr)
-             print("Falling back to pynput backend.", file=sys.stderr)
-             playback_backend = PynputKeyboardBackend() # Fallback
-    else:
+            print(f"Error initializing SamplePlaybackBackend: {e}", file=sys.stderr)
+            print("Falling back to pynput backend.", file=sys.stderr)
+            playback_backend = PynputKeyboardBackend() # Fallback
+    elif args.backend == 'midi':
+        try:
+            from playback.midi_backend import MidiPlaybackBackend
+            playback_backend = MidiPlaybackBackend(port_name=args.midi_port)
+        except ImportError as e:
+            print(f"Error importing MidiPlaybackBackend: {e}", file=sys.stderr)
+            print("Please ensure python-rtmidi is installed ('pip install python-rtmidi'). Falling back to pynput.", file=sys.stderr)
+            playback_backend = PynputKeyboardBackend() # Fallback
+        except Exception as e:
+            print(f"Error initializing MidiPlaybackBackend: {e}", file=sys.stderr)
+            print("Falling back to pynput backend.", file=sys.stderr)
+            playback_backend = PynputKeyboardBackend() # Fallback
+    else: 
         # Should not happen due to argparse choices, but safety first
         print(f"Error: Unknown backend '{args.backend}'. Using pynput.", file=sys.stderr)
         playback_backend = PynputKeyboardBackend()
@@ -104,6 +123,8 @@ def main():
     print("\n--- Controls ---")
     print(f" Playback Mode:   {args.mode.capitalize()}")
     print(f" Playback Backend: {args.backend}")
+    if args.backend == 'midi' and args.midi_port:
+        print(f" MIDI Port: {args.midi_port}")
     print(f" Score Tolerance: {args.tolerance}")
     print(f" Scores Directory: '{abs_scores_dir}'")
     if discovered_scores:
